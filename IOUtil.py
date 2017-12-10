@@ -35,26 +35,6 @@ def split_string(input):
     return input.split(" ", 1)
 
 
-def read_csv(file_path):
-    a = pandas.read_csv(file_path)
-    b = a["paper_text"]
-    content_no_references = [REFERENCES.split(ele, 1)[0] for ele in b]
-    for no_reference in content_no_references:
-        content_no_email = EMAIL.sub("", no_reference)
-        for ele in sent_tokenize(content_no_email):
-            no_float = FLOAT_NUMBER.sub(" ", ele)
-            no_equation = EQUATION.sub(" ", no_float)
-            no_bracket = BRACKET.sub(" ", no_equation)
-            no_rebundant_punct = CONTINOUS_PUNCT.sub(" ", no_bracket)
-            no_escape = ESCAPE.sub(" ", no_rebundant_punct)
-            no_rebundant_space = re.sub("\s{2,}", " ", no_escape)
-            if no_rebundant_space:
-                words = no_rebundant_space.split(" ")
-                words = [word.lower() for word in words if len(words) >= 3]
-                if words:
-                    print(" ".join(words))
-
-
 def read_csv2(file_path):
     a = pandas.read_csv(file_path)
 
