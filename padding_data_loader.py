@@ -66,12 +66,12 @@ def padding_batch(batch):
     return [padding_single(tensor, max_length) for tensor in batch]
 
 
-def create_data_loader(text_path, glove_path):
+def create_data_loader(text_path, glove_path, batch_size):
     text_data = read_file(text_path, lambda x: x.strip())
     text_data_set = TextDataset(glove_path=glove_path, text_data=text_data)
     loader = DataLoader(dataset=text_data_set,
                         collate_fn=padding_collate,
-                        batch_size=32,
+                        batch_size=batch_size,
                         shuffle=False,
                         num_workers=multiprocessing.cpu_count())
     return loader
