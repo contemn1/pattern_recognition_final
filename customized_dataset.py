@@ -25,6 +25,6 @@ class TextDataset(Dataset):
     def __getitem__(self, index):
         sentence = self.data_x[index]
         sentence = sentence.split(" ")
-        gloves = [self.glove_dict[word] for word in sentence]
+        gloves = [self.glove_dict[word] for word in sentence if word in self.glove_dict]
         glove_array = np.array(gloves)
         return torch.FloatTensor(glove_array)

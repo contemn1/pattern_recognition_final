@@ -1,6 +1,6 @@
 
 class Parameters:
-    def __init__(self, num_of_words):
+    def __init__(self, num_of_words, use_cuda):
         self.word_vocab_size = num_of_words
         self.word_embed_size = 300
 
@@ -10,7 +10,7 @@ class Parameters:
         self.encoder_num_layers = 2
 
         self.latent_variable_size = 100
-
+        self.use_cuda = use_cuda
         self.decoder_dilations = [1, 2, 4]
         self.decoder_kernels = [(400, self.latent_variable_size + self.word_embed_size, 3),
                                 (450, 400, 3),

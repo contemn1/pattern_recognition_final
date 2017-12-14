@@ -52,7 +52,6 @@ class RVAE_dilated(nn.Module):
             ''' Get context from encoder and sample z ~ N(mu, std)
             '''
             packed_seq = pack_padded_sequence(encoder_input, lengths, batch_first=True)
-
             context = self.encoder.forward(packed_seq, batch_size)
 
             mu = self.context_to_mu(context)
@@ -65,7 +64,6 @@ class RVAE_dilated(nn.Module):
 
             z = z * std + mu
             kld = (-0.5 * t.sum(logvar - t.pow(mu, 2) - t.exp(logvar) + 1, 1)).mean() / self.params.latent_variable_size
-            print(kld)
         else:
             kld = None
 

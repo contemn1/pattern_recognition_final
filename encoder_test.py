@@ -38,19 +38,22 @@ if __name__ == '__main__':
 
     print(args)
 
-    data_loader, num_words = create_data_loader(text_path="data/nips_test_sorted.txt",
-                                     glove_path="/Users/zxj/Downloads/nips_data/glove_nips.txt",
+    data_loader, num_words = create_data_loader(text_path="data/nips_train_sorted.txt",
+                                     glove_path="data/glove_nips.txt",
                                      batch_size=args.batch_size)
-    parameters = Parameters(num_of_words=num_words)
+    parameters = Parameters(num_of_words=num_words, use_cuda=args.use_cuda)
     rvae = RVAE_dilated(params=parameters)
+    if args.use_cuda:
+        rvae = rvae.cuda()
+
     adam_optimizer = Adam(rvae.learnable_parameters(), args.learning_rate)
 
     current_trainer = rvae.trainer(optimizer=adam_optimizer, data_loader=data_loader)
     results = []
     for iteration in range(args.num_iterations):
         kld, loss = current_trainer(args.use_cuda, args.dropout)
-        results.append(str(kld) + " " + str(loss))
-
+        results.append(str(kld.data.cpu().numpy()) + " " + str(loss.data.cpu().numpy()))
+        print(results[iteration])
         if iteration % 30 == 0:
             save_checkpoint({
             'epoch': iteration + 1,

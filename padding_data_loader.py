@@ -26,7 +26,7 @@ def padding_collate(batch):
     elem_type = type(batch[0])
     if torch.is_tensor(batch[0]):
         out = None
-        batch_length = [tensor.size()[0] for tensor in batch]
+        batch_length = sorted([tensor.size()[0] for tensor in batch], reverse=True)
         return torch.stack(padding_batch(batch), 0, out=out), batch_length
     elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' \
             and elem_type.__name__ != 'string_':
@@ -63,7 +63,8 @@ def padding_single(current_tensor, max_length):
 
 
 def padding_batch(batch):
-    max_length = len(batch[0])
+    batch_length = [len(ele) for ele in batch]
+    max_length = max(batch_length)
     return [padding_single(tensor, max_length) for tensor in batch]
 
 
