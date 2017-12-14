@@ -15,7 +15,6 @@ def string_transformer(glove_dict):
     return sentence_to_vector
 
 
-
 if __name__ == '__main__':
 
     DATA_PATH = "/Users/zxj/PycharmProjects/pattern_recognition_final/"

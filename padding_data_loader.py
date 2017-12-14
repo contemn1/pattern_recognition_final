@@ -26,7 +26,8 @@ def padding_collate(batch):
     elem_type = type(batch[0])
     if torch.is_tensor(batch[0]):
         out = None
-        return torch.stack(padding_batch(batch), 0, out=out)
+        batch_length = [tensor.size()[0] for tensor in batch]
+        return torch.stack(padding_batch(batch), 0, out=out), batch_length
     elif elem_type.__module__ == 'numpy' and elem_type.__name__ != 'str_' \
             and elem_type.__name__ != 'string_':
         elem = batch[0]
@@ -69,9 +70,10 @@ def padding_batch(batch):
 def create_data_loader(text_path, glove_path, batch_size):
     text_data = read_file(text_path, lambda x: x.strip())
     text_data_set = TextDataset(glove_path=glove_path, text_data=text_data)
+    num_words = len(text_data_set.glove_dict)
     loader = DataLoader(dataset=text_data_set,
                         collate_fn=padding_collate,
                         batch_size=batch_size,
                         shuffle=False,
                         num_workers=multiprocessing.cpu_count())
-    return loader
+    return loader, num_words

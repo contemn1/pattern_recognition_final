@@ -39,8 +39,8 @@ def read_file(file_path, preprocess):
 def output_file(file_path, sent_list):
     try:
         with open(file_path, mode="w+") as f:
-            for ele in sent_list:
-                f.write(ele)
+            for line in sent_list:
+                f.write(line)
 
     except IOError as err:
         print("Failed_to_open_file {0}".format(err))
@@ -139,10 +139,15 @@ def remove_words_not_in_glove(sentence, glove_dict):
 if __name__ == '__main__':
     DATA_PATH = "/Users/zxj/Downloads/nips_data/training_data/"
     file_paths = ["nips_train.txt", "nips_valid.txt", "nips_test.txt"]
+    out_paths = ["nips_train_sorted.txt", "nips_valid_sorted.txt", "nips_test_sorted.txt"]
+
     file_paths = [DATA_PATH + path for path in file_paths]
     files = [read_file(path, lambda x: x) for path in file_paths]
-    for ele in files:
-        ele.sort(key=lambda x: -len(x.split(" ")))
-    output_file("nips_train_sorted", files[0])
-    output_file("nips_valid_sorted", files[1])
-    output_file("nips_test_sorted", files[2])
+    for index in range(len(files)):
+        ele = files[index]
+        ele = [sent.split(" ") for sent in ele]
+        ele = [arr for arr in ele if 45 >= len(arr) >= 7]
+        ele.sort(key=lambda x: -len(x))
+        ele = [" ".join(arr) for arr in ele]
+        print(len(ele))
+        output_file(out_paths[index], ele)
