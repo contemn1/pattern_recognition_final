@@ -59,8 +59,6 @@ class RVAE_dilated(nn.Module):
             logvar = self.context_to_logvar(context)
             std = t.exp(0.5 * logvar)
 
-            print(logvar)
-            print(std)
             z = Variable(t.randn([batch_size, self.params.latent_variable_size]))
             if use_cuda:
                 z = z.cuda()
@@ -84,6 +82,8 @@ class RVAE_dilated(nn.Module):
     def trainer(self, optimizer, data_loader):
         def train(use_cuda, dropout):
             losses = []
+            loss = 0
+            kld = 0
             for data_tuple in data_loader:
                 optimizer.zero_grad()
                 target, logits, kld = self.forward(drop_prob=dropout,
@@ -93,9 +93,10 @@ class RVAE_dilated(nn.Module):
 
                 cross_entropy = F.binary_cross_entropy_with_logits(logits, target)
                 loss = cross_entropy + kld
-                print(loss)
                 loss.backward()
                 optimizer.step()
+
+            return kld, loss
 
         return train
 

@@ -17,7 +17,7 @@ class Parameters:
                                 (500, 450, 3)]
         self.decoder_num_layers = len(self.decoder_kernels)
 
-        ''' paddings in thin case is necessary to prevent using t+i-th token in t-th token prediction.
+        ''' paddings in this case is necessary to prevent using t+i-th token in t-th token prediction.
             paddings are resized because kernel width is increased when dilation is performed
         '''
         self.decoder_paddings = [Parameters.effective_k(w, self.decoder_dilations[i]) - 1
