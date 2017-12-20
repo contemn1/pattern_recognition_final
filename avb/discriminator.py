@@ -1,12 +1,12 @@
-import torch as t
-import torch.nn as nn
-import torch.nn.functional as F
 from torch.nn import Parameter
+from torch import nn
+import torch as t
+import torch.nn.functional as F
 
 
-class Decoder(nn.Module):
+class Discriminator(nn.Module):
     def __init__(self, params):
-        super(Decoder, self).__init__()
+        super(Discriminator, self).__init__()
 
         self.params = params
 
@@ -18,9 +18,9 @@ class Decoder(nn.Module):
                        for out_chan, in_chan, width in params.decoder_kernels]
         self._add_to_parameters(self.biases, 'decoder_bias')
 
-        self.out_size = self.params.decoder_kernels[-1][0]
+        self.out_size = self.params.discriminator_kernels[-1][0]
 
-        self.fc = nn.Linear(self.out_size, self.params.word_vocab_size)
+        self.fc = nn.Linear(self.out_size, 1)
 
     def forward(self, decoder_input, z, drop_prob):
         """
@@ -60,11 +60,10 @@ class Decoder(nn.Module):
         x = x.transpose(1, 2).contiguous()
         x = x.view(-1, self.out_size)
         x = self.fc(x)
-        result = x.view(-1, seq_len, self.params.word_vocab_size)
+        result = x.view(-1, seq_len, 1)
 
         return result
 
     def _add_to_parameters(self, parameters, name):
         for i, parameter in enumerate(parameters):
             self.register_parameter(name='{}-{}'.format(name, i), param=parameter)
-

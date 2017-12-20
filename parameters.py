@@ -15,7 +15,14 @@ class Parameters:
         self.decoder_kernels = [(400, self.latent_variable_size + self.word_embed_size, 3),
                                 (450, 400, 3),
                                 (500, 450, 3)]
+
+        self.discriminator_kernels = [(400, self.latent_variable_size + self.word_embed_size, 3),
+                                     (450, 400, 3),
+                                     (500, 450, 3)]
+
         self.decoder_num_layers = len(self.decoder_kernels)
+
+        self.discriminator_num_layers = len(self.discriminator_kernels)
 
         ''' paddings in this case is necessary to prevent using t+i-th token in t-th token prediction.
             paddings are resized because kernel width is increased when dilation is performed

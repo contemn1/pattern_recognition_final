@@ -1,22 +1,10 @@
-import numpy as np
-import torch as t
-import torch.nn as nn
-import torch.nn.functional as F
-from torch.autograd import Variable
-from torch.nn import Parameter
-
-from decoder import Decoder
-from encoder import Encoder
-
-from perplexity import Perplexity
-
-from functional import kld_coef, parameters_allocation_check, fold
-from torch.nn.utils.rnn import pack_padded_sequence
+from torch import nn
 
 
-class RVAE_dilated(nn.Module):
+class AVB(nn.Module):
+
     def __init__(self, params, embedding_matrix):
-        super(RVAE_dilated, self).__init__()
+        super(AVB, self).__init__()
 
         self.params = params
 
@@ -104,4 +92,3 @@ class RVAE_dilated(nn.Module):
             return kld, loss
 
         return train
-
