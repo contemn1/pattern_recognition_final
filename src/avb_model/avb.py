@@ -1,13 +1,14 @@
-from torch import nn
+import numpy as np
 import torch
-from torch import autograd
-from torch.autograd import Variable
 import torch.nn.functional as F
-from avb_model.avb_encoder import Encoder
-from avb_model.avb_decoder import Decoder
+from src.avb_model.avb_decoder import Decoder
+from torch import autograd
+from torch import nn
+from torch.autograd import Variable
 from torch.nn import Parameter
 from torch.nn.utils.rnn import pack_padded_sequence
-import numpy as np
+
+from src.avb_model.avb_encoder import Encoder
 
 
 class AVB(nn.Module):

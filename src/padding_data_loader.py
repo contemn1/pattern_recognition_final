@@ -1,14 +1,15 @@
-import torch
-from customized_dataset import TextDataset
-from customized_dataset import TextIndexDataset
-from IOUtil import read_file
-from IOUtil import get_glove_nips
-from torch.utils.data import DataLoader
-import multiprocessing
-import numpy as np
 import collections
+import multiprocessing
 import re
 
+import numpy as np
+import torch
+from src.customized_dataset import TextDataset
+from src.customized_dataset import TextIndexDataset
+from torch.utils.data import DataLoader
+
+from src.IOUtil import get_glove_nips
+from src.IOUtil import read_file
 
 numpy_type_map = {
     'float64': torch.DoubleTensor,

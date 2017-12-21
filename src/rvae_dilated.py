@@ -5,12 +5,11 @@ import torch.nn.functional as F
 from torch.autograd import Variable
 from torch.nn import Parameter
 
-from decoder import Decoder
-from encoder import Encoder
+from src.decoder import Decoder
+from src.encoder import Encoder
 
-from perplexity import Perplexity
+from src.perplexity import Perplexity
 
-from functional import kld_coef, parameters_allocation_check, fold
 from torch.nn.utils.rnn import pack_padded_sequence
 
 

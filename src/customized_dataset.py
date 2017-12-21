@@ -1,8 +1,8 @@
-from torch.utils.data import Dataset
-from IOUtil import get_glove_nips
 import numpy as np
-import json
 import torch
+from torch.utils.data import Dataset
+
+from src.IOUtil import get_glove_nips
 
 
 class TextDataset(Dataset):

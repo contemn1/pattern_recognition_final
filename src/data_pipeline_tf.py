@@ -1,7 +1,7 @@
-import tensorflow as tf
-import IOUtil
-import tensorflow.contrib.eager as tfe
 import numpy as np
+import tensorflow as tf
+
+from src import IOUtil
 
 
 def string_transformer(glove_dict):
