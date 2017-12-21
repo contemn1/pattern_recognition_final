@@ -65,10 +65,10 @@ if __name__ == '__main__':
     parser.add_argument('--embedding-dimension', type=int, default=300, metavar='ED',
                         help='embedding dimension (default: 300)')
     parser.add_argument('--train-path', type=str,
-                        default='../data/nips_train_sorted.txt',
+                        default='./data/nips_train_sorted.txt',
                         help='default train path is data/nips_train_sorted')
     parser.add_argument('--glove-path', type=str,
-                        default='../data/glove_nips.txt',
+                        default='./data/glove_nips.txt',
                         help='default glove path is data/glove_nips.txt')
 
     args = parser.parse_args()
