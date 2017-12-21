@@ -1,12 +1,12 @@
-from torch.nn import Parameter
-from torch import nn
 import torch as t
+import torch.nn as nn
 import torch.nn.functional as F
+from torch.nn import Parameter
 
 
-class Discriminator(nn.Module):
+class Decoder(nn.Module):
     def __init__(self, params):
-        super(Discriminator, self).__init__()
+        super(Decoder, self).__init__()
 
         self.params = params
 
@@ -18,31 +18,20 @@ class Discriminator(nn.Module):
                        for out_chan, in_chan, width in params.decoder_kernels]
         self._add_to_parameters(self.biases, 'decoder_bias')
 
-        self.out_size = self.params.discriminator_kernels[-1][0]
+        self.out_size = self.params.decoder_kernels[-1][0]
 
-        self.fc = nn.Linear(self.out_size, 1)
+        self.fc = nn.Linear(self.out_size, self.params.word_vocab_size)
 
-    def forward(self, decoder_input, z, drop_prob):
+    def forward(self, decoder_input):
         """
         :param decoder_input: tensor with shape of [batch_size, seq_len, embed_size]
-        :param z: sequence latent variable with shape of [batch_size, latent_variable_size]
-        :param drop_prob: probability of an element of decoder input to be zeroed in sense of dropout
 
         :return: unnormalized logits of sentense words distribution probabilities
                  with shape of [batch_size, seq_len, word_vocab_size]
         """
 
-        [batch_size, seq_len, embedding_size] = decoder_input.size()
-
-        '''
-            decoder is conditioned on context via additional bias = W_cond * z to every input token
-        '''
-
-        z = t.cat([z] * seq_len, 1).view(batch_size, seq_len, self.params.latent_variable_size)
-        decoder_input = t.cat([decoder_input, z], 2)
-        decoder_input = F.dropout(decoder_input, drop_prob)
-
         # x is tensor with shape [batch_size, input_size=in_channels, seq_len=input_width]
+        seq_len = decoder_input.size()[1]
         x = decoder_input.transpose(1, 2).contiguous()
 
         for layer, kernel in enumerate(self.kernels):
@@ -60,10 +49,11 @@ class Discriminator(nn.Module):
         x = x.transpose(1, 2).contiguous()
         x = x.view(-1, self.out_size)
         x = self.fc(x)
-        result = x.view(-1, seq_len, 1)
+        result = x.view(-1, seq_len, self.params.word_vocab_size)
 
         return result
 
     def _add_to_parameters(self, parameters, name):
         for i, parameter in enumerate(parameters):
             self.register_parameter(name='{}-{}'.format(name, i), param=parameter)
+

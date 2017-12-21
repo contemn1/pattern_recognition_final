@@ -40,7 +40,7 @@ def output_file(file_path, sent_list):
     try:
         with open(file_path, mode="w+") as f:
             for line in sent_list:
-                f.write(line)
+                f.write(line + "\n")
 
     except IOError as err:
         print("Failed_to_open_file {0}".format(err))

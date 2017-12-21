@@ -83,25 +83,38 @@ class RVAE_dilated(nn.Module):
         return [p for p in self.parameters() if p.requires_grad]
 
     def trainer(self, optimizer, data_loader):
+        perplexity = Perplexity()
+
         def train(use_cuda, dropout):
-            loss = 0
-            kld = 0
+            loss_list = []
+            kld_list = []
             for data_tuple in data_loader:
                 target, logits, kld = self.forward(drop_prob=dropout,
                                        encoder_input_tuple=data_tuple,
                                        use_cuda=use_cuda,
                                        z=None)
 
+                batch_size = target.data.size()[0]
+                sequence_length = target.data.size()[1]
+
                 logits = logits.view(-1, self.params.word_vocab_size)
                 target = target.view(-1)
                 cross_entropy = F.cross_entropy(logits, target)
+                loss = sequence_length * cross_entropy + kld
+                logits = logits.view(batch_size, -1, self.params.word_vocab_size)
+                target = target.view(batch_size, -1)
+                ppl = perplexity(logits, target).mean()
 
-                loss = 79 * cross_entropy + kld
+                kld_number =kld.data.cpu().numpy()
+                loss_number = loss.data.cpu().numpy()
+                ppl_number = ppl.data.cpu().numpy()
+                kld_list.append(kld_number[0])
+                loss_list.append(loss_number[0])
                 optimizer.zero_grad()
                 loss.backward()
                 optimizer.step()
 
-            return kld, loss
+            return kld_list, loss_list
 
         return train
 

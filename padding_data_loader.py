@@ -108,7 +108,6 @@ def padding_index_batch(batch):
 
         padding_tensor = torch.LongTensor(length_difference).zero_()
         result = torch.cat((current_tensor, padding_tensor))
-        print(result)
         return result
 
     max_length = len(batch[0])

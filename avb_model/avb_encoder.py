@@ -4,7 +4,7 @@ import torch.nn.functional as F
 
 
 class Encoder(nn.Module):
-    def __init__(self, params):
+    def __init__(self, params, noise_size):
         super(Encoder, self).__init__()
 
         self.params = params
@@ -14,7 +14,6 @@ class Encoder(nn.Module):
                            num_layers=self.params.encoder_num_layers,
                            batch_first=True,
                            bidirectional=True)
-
 
     def forward(self, input_seq, batch_size):
         """
