@@ -133,8 +133,11 @@ def create_data_loader(text_path, glove_path, batch_size):
     return loader, num_words
 
 
-def create_new_data_loader(args):
-    text_data = read_file(args.train_path, lambda x: x.strip())
+def create_new_data_loader(args, path=''):
+    if not path:
+        path = args.train_path
+
+    text_data = read_file(path, lambda x: x.strip())
     glove_dict = get_glove_nips(args.glove_path)
     num_words = len(glove_dict) + 1
     embedding_matrix = np.zeros((num_words, args.embedding_dimension))

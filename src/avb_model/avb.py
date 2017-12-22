@@ -85,74 +85,62 @@ class AVB(nn.Module):
         # word_embedding is constant parameter thus it must be dropped from list of parameters for optimizer
         return [p for p in self.parameters() if p.requires_grad]
 
-    def trainer(self, optimizer_vae, discriminator, optimizer_discriminator, data_loader):
-        def train(use_cuda, dropout):
-            loss_list = []
-            kld_list = []
-            for data_tuple in data_loader:
-                target, logits, real, fake = self.forward(drop_prob=dropout,
+    def trainer(self, optimizer_vae, discriminator, optimizer_discriminator, use_cuda, dropout):
+        def train_epoch(data_tuple):
+            target, logits, real, fake = self.forward(drop_prob=dropout,
                                        encoder_input_tuple=data_tuple,
                                        use_cuda=use_cuda,
                                        z=None,
                                        inference=False)
 
-                batch_size = target.data.size()[0]
-                sequence_length = target.data.size()[1]
+            batch_size = target.data.size()[0]
+            sequence_length = target.data.size()[1]
 
 
-                logits = logits.view(-1, self.params.word_vocab_size)
-                target = target.view(-1)
-                cross_entropy = F.cross_entropy(logits, target)
-                cross_entropy_data = cross_entropy.data.cpu().numpy()[0]
-                kld = discriminator.forward(real).mean()
-                loss = sequence_length*cross_entropy + kld
-                kld_number =kld.data.cpu().numpy()[0]
-                loss_number = loss.data.cpu().numpy()[0]
-                kld_list.append(kld_number)
-                loss_list.append(loss_number)
-                print(kld_number, loss_number)
-                optimizer_vae.zero_grad()
-                loss.backward()
-                optimizer_vae.step()
+            logits = logits.view(-1, self.params.word_vocab_size)
+            target = target.view(-1)
+            cross_entropy = F.cross_entropy(logits, target)
+            kld = discriminator.forward(real).mean()
+            loss = sequence_length*cross_entropy + kld
+            optimizer_vae.zero_grad()
+            loss.backward()
+            optimizer_vae.step()
 
-                discriminator.zero_grad()
-                detached_real = real.detach()
-                d_real = discriminator(detached_real)
-                d_real = d_real.mean()
-                d_real.backward(self.mone)
-                d_fake = discriminator(fake)
-                d_fake = d_fake.mean()
-                d_fake.backward(self.one)
-                gradient_penalty = calc_gradient_penalty(discriminator, detached_real.data, fake.data, batch_size, use_cuda)
-                gradient_penalty.backward()
-                D_cost = d_fake - d_real + gradient_penalty
-                Wasserstein_D = d_real - d_fake
-                optimizer_discriminator.step()
+            discriminator.zero_grad()
+            detached_real = real.detach()
+            d_real = discriminator(detached_real)
+            d_real = d_real.mean()
+            d_real.backward(self.mone)
+            d_fake = discriminator(fake)
+            d_fake = d_fake.mean()
+            d_fake.backward(self.one)
+            gradient_penalty = calc_gradient_penalty(discriminator, detached_real.data, fake.data, batch_size, use_cuda)
+            gradient_penalty.backward()
+            D_cost = d_fake - d_real + gradient_penalty
+            Wasserstein_D = d_real - d_fake
+            optimizer_discriminator.step()
 
-            return kld_list, loss_list
+            return kld, loss, D_cost, Wasserstein_D
 
-        return train
+        return train_epoch
 
-
-    def validater(self, data_loader):
-        perplexity = Perplexity()
-        def validate(use_cuda, dropout):
+    def validater(self, use_cuda, dropout):
+        def validate(data_tuple):
             ppl_list = []
-            for data_tuple in data_loader:
-                target, logits, _, _ = self.forward(drop_prob=dropout,
+            target, logits, _, _ = self.forward(drop_prob=dropout,
                                        encoder_input_tuple=data_tuple,
                                        use_cuda=use_cuda,
                                        z=None,
                                        inference=True)
 
-                logits = logits.view(-1, self.params.word_vocab_size)
-                target = target.view(-1)
+            logits = logits.view(-1, self.params.word_vocab_size)
+            target = target.view(-1)
 
-                cross_entropy = F.cross_entropy(logits, target)
-                cross_entropy_numpy = cross_entropy.data.cpu().numpy()
-                print(cross_entropy_numpy)
+            cross_entropy = F.cross_entropy(logits, target)
+            cross_entropy_numpy = cross_entropy.data.cpu().numpy()
+            result = np.exp2(cross_entropy_numpy[0])
 
-            return ppl_list
+            return result
 
         return validate
 

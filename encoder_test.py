@@ -5,6 +5,7 @@ from src.padding_data_loader import create_new_data_loader
 from src.parameters import Parameters
 from src.rvae_dilated import RVAE_dilated
 from torch.optim import Adam
+import numpy as np
 
 result_path = "results/"
 
@@ -14,8 +15,10 @@ def save_checkpoint(state, filename='checkpoint_ecpch{0}.tar'):
     torch.save(state, filename)
 
 
-def train_model(args, model_path=None):
+def train_model(args, model_path=None, save=True):
     loader, num_words, embedding_matrix = create_new_data_loader(args)
+    valid_loader, _, _ = create_new_data_loader(args, path='data/nips_valid_sorted.txt')
+
     parameters = Parameters(num_of_words=num_words, use_cuda=args.use_cuda)
     rvae = RVAE_dilated(params=parameters, embedding_matrix=embedding_matrix)
     adam_optimizer = Adam(rvae.learnable_parameters(), args.learning_rate)
@@ -27,15 +30,31 @@ def train_model(args, model_path=None):
         rvae.load_state_dict(check_point['state_dict'])
         adam_optimizer.load_state_dict(check_point['optimizer'])
 
-    current_trainer = rvae.trainer(optimizer=adam_optimizer, data_loader=loader)
-    for iteration in range(args.num_iterations):
-        kld_list, loss_list = current_trainer(args.use_cuda, args.dropout)
-        if iteration % 3 == 0:
+    current_trainer = rvae.trainer(optimizer=adam_optimizer,
+                                   use_cuda=args.use_cuda,
+                                   dropout=args.dropout)
+
+
+    current_validater = rvae.validater(use_cuda=args.use_cuda, dropout=args.dropout)
+    epoch = 0
+    for train_data_batch in loader:
+        ppl_list = []
+        kld, loss = current_trainer(data_tuple=train_data_batch)
+        if epoch % 15 == 14:
+            for valid_data_batch in valid_loader:
+                    perplexity = current_validater(valid_data_batch)
+                    ppl_list.append(perplexity)
+
+            print(np.average(ppl_list))
+        epoch += 1
+
+        if save and epoch % 100 == 99:
             save_checkpoint({
-            'epoch': iteration + 1,
-            'state_dict': rvae.state_dict(),
-            'optimizer': adam_optimizer.state_dict(),
-            })
+                'epoch': epoch + 1,
+                 'state_dict': rvae.state_dict(),
+                 'optimizer': adam_optimizer.state_dict(),
+                }
+            )
 
 
 if __name__ == '__main__':
@@ -66,5 +85,5 @@ if __name__ == '__main__':
                         help='default glove path is data/glove_nips.txt')
 
     args = parser.parse_args()
-
-    train_model(args)
+    pretrained_model_path = result_path + "checkpoint_ecpch9.pth"
+    train_model(args, model_path=pretrained_model_path, save=False)
