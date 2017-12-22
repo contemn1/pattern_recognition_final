@@ -1,13 +1,10 @@
 import argparse
 
 import torch
-from src.padding_data_loader import create_data_loader
 from src.padding_data_loader import create_new_data_loader
 from src.parameters import Parameters
 from src.rvae_dilated import RVAE_dilated
 from torch.optim import Adam
-
-from src import IOUtil
 
 result_path = "results/"
 
@@ -17,31 +14,28 @@ def save_checkpoint(state, filename='checkpoint_ecpch{0}.tar'):
     torch.save(state, filename)
 
 
-def train_example1(args):
-    data_loader, num_words = create_data_loader(text_path="data/nips_train_sorted.txt",
-                                     glove_path="data/glove_nips.txt",
-                                     batch_size=args.batch_size)
+def train_model(args, model_path=None):
+    loader, num_words, embedding_matrix = create_new_data_loader(args)
     parameters = Parameters(num_of_words=num_words, use_cuda=args.use_cuda)
-    rvae = RVAE_dilated(params=parameters)
+    rvae = RVAE_dilated(params=parameters, embedding_matrix=embedding_matrix)
+    adam_optimizer = Adam(rvae.learnable_parameters(), args.learning_rate)
     if args.use_cuda:
         rvae = rvae.cuda()
 
-    adam_optimizer = Adam(rvae.learnable_parameters(), args.learning_rate)
+    if model_path:
+        check_point = torch.load(model_path)
+        rvae.load_state_dict(check_point['state_dict'])
+        adam_optimizer.load_state_dict(check_point['optimizer'])
 
-    current_trainer = rvae.trainer(optimizer=adam_optimizer, data_loader=data_loader)
-    results = []
+    current_trainer = rvae.trainer(optimizer=adam_optimizer, data_loader=loader)
     for iteration in range(args.num_iterations):
-        kld, loss = current_trainer(args.use_cuda, args.dropout)
-        results.append(str(kld.data.cpu().numpy()) + " " + str(loss.data.cpu().numpy()))
-        print(results[iteration])
-        if iteration % 30 == 0:
+        kld_list, loss_list = current_trainer(args.use_cuda, args.dropout)
+        if iteration % 3 == 0:
             save_checkpoint({
             'epoch': iteration + 1,
             'state_dict': rvae.state_dict(),
             'optimizer': adam_optimizer.state_dict(),
             })
-            iter_result = result_path + "iteration_{0}_result".format(iteration)
-            IOUtil.output_file(file_path=iter_result, sent_list=results)
 
 
 if __name__ == '__main__':
@@ -65,27 +59,12 @@ if __name__ == '__main__':
     parser.add_argument('--embedding-dimension', type=int, default=300, metavar='ED',
                         help='embedding dimension (default: 300)')
     parser.add_argument('--train-path', type=str,
-                        default='./data/nips_train_sorted.txt',
+                        default='data/nips_train_sorted.txt',
                         help='default train path is data/nips_train_sorted')
     parser.add_argument('--glove-path', type=str,
-                        default='./data/glove_nips.txt',
+                        default='data/glove_nips.txt',
                         help='default glove path is data/glove_nips.txt')
 
     args = parser.parse_args()
 
-    loader, num_words, embedding_matrix = create_new_data_loader(args)
-    parameters = Parameters(num_of_words=num_words, use_cuda=args.use_cuda)
-    rvae = RVAE_dilated(params=parameters, embedding_matrix=embedding_matrix)
-    if args.use_cuda:
-        rvae = rvae.cuda()
-    adam_optimizer = Adam(rvae.learnable_parameters(), args.learning_rate)
-    current_trainer = rvae.trainer(optimizer=adam_optimizer, data_loader=loader)
-    results = []
-    for iteration in range(args.num_iterations):
-        kld_list, loss_list = current_trainer(args.use_cuda, args.dropout)
-        if iteration % 10 == 0:
-            save_checkpoint({
-            'epoch': iteration + 1,
-            'state_dict': rvae.state_dict(),
-            'optimizer': adam_optimizer.state_dict(),
-            })
+    train_model(args)
