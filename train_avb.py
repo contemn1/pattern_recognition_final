@@ -2,7 +2,6 @@ import argparse
 import os
 import torch
 import sys
-print(sys.path)
 
 from src.parameters import Parameters
 from torch.optim import Adam
@@ -11,12 +10,71 @@ from src.avb_model.avb import AVB
 from src.avb_model.discriminator import Discriminator
 from src.padding_data_loader import create_new_data_loader
 
-result_path = "/home/zxj/Documents/pattern_recognition_final/results"
+result_path = "/home/tristan/Documents/pattern_recognition_final/results"
 
 
 def save_checkpoint(state, filename='checkpoint_ecpch{0}.tar'):
     filename = result_path + filename.format(state['epoch'])
     torch.save(state, filename)
+
+
+def trian_model(args, resume=False):
+    model_path = "/home/tristan/Documents/pattern_recognition_final/resultscheckpoint_ecpch11.tar"
+    check_point = torch.load(model_path)
+
+    loader, num_words, embedding_matrix = create_new_data_loader(args)
+    parameters = Parameters(num_of_words=num_words, use_cuda=args.use_cuda)
+    cur_avb = AVB(params=parameters, embedding_matrix=embedding_matrix,
+                  noise_size=args.noise_size)
+
+    curr_discriminator = Discriminator(params=parameters)
+    if args.use_cuda:
+        cur_avb = cur_avb.cuda()
+        curr_discriminator = curr_discriminator.cuda()
+
+    optimizer_vae = Adam(cur_avb.learnable_parameters(), args.learning_rate)
+    optimizer_discriminator = Adam(curr_discriminator.parameters(), args.learning_rate)
+
+    current_trainer = cur_avb.trainer(optimizer_vae=optimizer_vae,
+                                      discriminator=curr_discriminator,
+                                      optimizer_discriminator=optimizer_discriminator,
+                                      data_loader=loader)
+
+    if resume:
+        cur_avb.load_state_dict(check_point['vae_state_dict'])
+        curr_discriminator.load_state_dict(check_point['discriminator_state_dict'])
+        optimizer_vae.load_state_dict(check_point['optimizer_vae'])
+        optimizer_discriminator.load_state_dict(check_point['optimizer_discriminator'])
+
+    for iteration in range(args.num_iterations):
+        kld_list, loss_list = current_trainer(args.use_cuda, args.dropout)
+        if iteration % 10 == 0:
+            save_checkpoint({
+            'epoch': iteration + 1,
+            'vae_state_dict': cur_avb.state_dict(),
+            'discriminator_state_dict': curr_discriminator.state_dict(),
+            'optimizer_vae': optimizer_vae.state_dict(),
+            'optimizer_discriminator':optimizer_discriminator.state_dict()
+            })
+
+
+def test_model(args):
+    model_path = "/home/tristan/Documents/pattern_recognition_final/resultscheckpoint_ecpch21.tar"
+    check_point = torch.load(model_path)
+    loader, num_words, embedding_matrix = create_new_data_loader(args)
+
+    parameters = Parameters(num_of_words=num_words, use_cuda=args.use_cuda)
+
+    cur_avb = AVB(params=parameters, embedding_matrix=embedding_matrix,
+                  noise_size=args.noise_size)
+    if args.use_cuda:
+        cur_avb = cur_avb.cuda()
+
+    cur_avb.load_state_dict(check_point['vae_state_dict'])
+
+    validater = cur_avb.validater(data_loader=loader)
+    validater(use_cuda=args.use_cuda,
+              dropout=args.dropout)
 
 
 if __name__ == '__main__':
@@ -49,34 +107,8 @@ if __name__ == '__main__':
                         help='noise size (default: 50)')
 
 
-
     args = parser.parse_args()
 
-    loader, num_words, embedding_matrix = create_new_data_loader(args)
-    parameters = Parameters(num_of_words=num_words, use_cuda=args.use_cuda)
-    cur_avb = AVB(params=parameters, embedding_matrix=embedding_matrix,
-                  noise_size=args.noise_size,
-                  batch_size=args.batch_size)
-    curr_discriminator = Discriminator(params=parameters)
-    if args.use_cuda:
-        cur_avb = cur_avb.cuda()
-        curr_discriminator = curr_discriminator.cuda()
-
-    optimizer_vae = Adam(cur_avb.learnable_parameters(), args.learning_rate)
-    optimizer_discriminator = Adam(curr_discriminator.parameters(), args.learning_rate)
-
-    current_trainer = cur_avb.trainer(optimizer_vae=optimizer_vae,
-                                      discriminator=curr_discriminator,
-                                      optimizer_discriminator=optimizer_discriminator,
-                                      data_loader=loader)
-    results = []
-    for iteration in range(args.num_iterations):
-        kld_list, loss_list = current_trainer(args.use_cuda, args.dropout)
-        if iteration % 10 == 0:
-            save_checkpoint({
-            'epoch': iteration + 1,
-            'vae_state_dict': cur_avb.state_dict(),
-            'discriminator_state_dict': curr_discriminator.state_dict(),
-            'optimizer_vae': optimizer_vae.state_dict(),
-            'optimizer_discriminator':optimizer_discriminator.state_dict()
-            })
+    model_path = "/home/tristan/Documents/pattern_recognition_final/resultscheckpoint_ecpch21.tar"
+    check_point = torch.load(model_path)
+    print(check_point['vae_state_dict'])

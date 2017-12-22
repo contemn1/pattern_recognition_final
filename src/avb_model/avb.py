@@ -7,13 +7,14 @@ from torch import nn
 from torch.autograd import Variable
 from torch.nn import Parameter
 from torch.nn.utils.rnn import pack_padded_sequence
+from src.perplexity import Perplexity
 
 from src.avb_model.avb_encoder import Encoder
 
 
 class AVB(nn.Module):
 
-    def __init__(self, params, embedding_matrix, noise_size, batch_size):
+    def __init__(self, params, embedding_matrix, noise_size):
         super(AVB, self).__init__()
 
         self.params = params
@@ -24,16 +25,6 @@ class AVB(nn.Module):
         self.encoder = Encoder(self.params, noise_size=noise_size)
 
         self.context_to_latent = nn.Linear(self.params.encoder_rnn_size * 2, self.params.latent_variable_size)
-
-        zeros = torch.zeros((batch_size, self.params.latent_variable_size))
-        ones = torch.ones((batch_size, self.params.latent_variable_size))
-        if params.use_cuda:
-            zeros = zeros.cuda()
-            ones = ones.cuda()
-
-        self.z_mean = Variable(zeros, requires_grad=True)
-        self.z_var = Variable(ones, requires_grad=True)
-        self.z_std = Variable(ones, requires_grad=True)
 
         self.decoder = Decoder(self.params)
 
@@ -46,7 +37,8 @@ class AVB(nn.Module):
     def forward(self, drop_prob,
                 encoder_input_tuple=None,
                 use_cuda=False,
-                z=None):
+                z=None,
+                inference=False):
         """
         :param encoder_input_tuple: An tensor with shape of [batch_size, seq_len] of Long type
 
@@ -63,7 +55,8 @@ class AVB(nn.Module):
         """
         encoder_input, lengths = encoder_input_tuple
         batch_size = encoder_input.size()[0]
-        encoder_input = Variable(encoder_input).cuda() if use_cuda else Variable(encoder_input)
+        encoder_input = Variable(encoder_input, volatile=inference).cuda() if use_cuda else Variable(encoder_input,
+                                                                                                     volatile=inference)
         encoder_input_matrix = self.word_embeddings(encoder_input)
 
         if z is None:
@@ -77,7 +70,7 @@ class AVB(nn.Module):
         if use_cuda:
             fake_z = fake_z.cuda()
 
-        fake_z = Variable(fake_z, requires_grad=True)
+        fake_z = Variable(fake_z, volatile=inference)
 
         fake = create_decoder_input(encoder_input_matrix, fake_z, drop_prob, self.params.latent_variable_size)
 
@@ -100,7 +93,9 @@ class AVB(nn.Module):
                 target, logits, real, fake = self.forward(drop_prob=dropout,
                                        encoder_input_tuple=data_tuple,
                                        use_cuda=use_cuda,
-                                       z=None)
+                                       z=None,
+                                       inference=False)
+
                 batch_size = target.data.size()[0]
                 sequence_length = target.data.size()[1]
 
@@ -108,13 +103,14 @@ class AVB(nn.Module):
                 logits = logits.view(-1, self.params.word_vocab_size)
                 target = target.view(-1)
                 cross_entropy = F.cross_entropy(logits, target)
+                cross_entropy_data = cross_entropy.data.cpu().numpy()[0]
                 kld = discriminator.forward(real).mean()
                 loss = sequence_length*cross_entropy + kld
                 kld_number =kld.data.cpu().numpy()[0]
                 loss_number = loss.data.cpu().numpy()[0]
                 kld_list.append(kld_number)
                 loss_list.append(loss_number)
-                print(kld_number, loss_number, np.exp2(cross_entropy.data.cpu()[0]))
+                print(kld_number, loss_number)
                 optimizer_vae.zero_grad()
                 loss.backward()
                 optimizer_vae.step()
@@ -136,6 +132,29 @@ class AVB(nn.Module):
             return kld_list, loss_list
 
         return train
+
+
+    def validater(self, data_loader):
+        perplexity = Perplexity()
+        def validate(use_cuda, dropout):
+            ppl_list = []
+            for data_tuple in data_loader:
+                target, logits, _, _ = self.forward(drop_prob=dropout,
+                                       encoder_input_tuple=data_tuple,
+                                       use_cuda=use_cuda,
+                                       z=None,
+                                       inference=True)
+
+                logits = logits.view(-1, self.params.word_vocab_size)
+                target = target.view(-1)
+
+                cross_entropy = F.cross_entropy(logits, target)
+                cross_entropy_numpy = cross_entropy.data.cpu().numpy()
+                print(cross_entropy_numpy)
+
+            return ppl_list
+
+        return validate
 
 
 LAMBDA = 10
